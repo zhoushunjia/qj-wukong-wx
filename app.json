@@ -43,7 +43,7 @@
       "pagePath": "pages/my/index",
       "iconPath": "images/nav/my-off.png",
       "selectedIconPath": "images/nav/my-on.png",
-      "text": "我的git测试"
+      "text": "我的"
     }]
   }
 }
