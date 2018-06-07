@@ -39,6 +39,14 @@ Page({
       })
       return
     }
+    if (!(/^1[34578]\d{9}$/.test(mobile))) {
+      wx.showModal({
+        title: '提示',
+        content: '请填写正确的手机号码',
+        showCancel: false
+      })
+      return
+    } 
     if (this.data.selProvince == "请选择"){
       wx.showModal({
         title: '提示',
@@ -78,38 +86,44 @@ Page({
       })
       return
     }
-    var apiAddoRuPDATE = "add";
+
+    var apiAddoRuPDATE = "http://127.0.0.1:8090/wx/receivingAddress/addAddress";
     var apiAddid = that.data.id;
     if (apiAddid) {
-      apiAddoRuPDATE = "update";
+      apiAddoRuPDATE = "http://127.0.0.1:8090/wx/receivingAddress/udpateById?id=" + apiAddid;
     } else {
       apiAddid = 0;
     }
     wx.request({
-      url: 'https://api.it120.cc/' + app.globalData.subDomain + '/user/shipping-address/' + apiAddoRuPDATE,
+      url: apiAddoRuPDATE,
       data: {
-        token: app.globalData.token,
-        id: apiAddid,
+        wechatId:111,
         provinceId: commonCityData.cityData[this.data.selProvinceIndex].id,
         cityId: cityId,
-        districtId: districtId,
-        linkMan:linkMan,
-        address:address,
-        mobile:mobile,
+        areaId: districtId,
+        consignee:linkMan,
+        address: this.data.selProvince + this.data.selCity + this.data.selDistrict+address,
+        phoneNo:mobile,
         code:code,
-        isDefault:'true'
+        isDefault: this.data.isDefault ? this.data.isDefault : 0
       },
       success: function(res) {
-        if (res.data.code != 0) {
-          // 登录错误 
-          wx.hideLoading();
+        // if (res.data.code != 0) {
+        //   // 登录错误 
+        //   wx.hideLoading();
+        //   wx.showModal({
+        //     title: '失败',
+        //     content: res.data.msg,
+        //     showCancel:false
+        //   })
+        //   return;
+        // }
           wx.showModal({
-            title: '失败',
+            title: res.data.code,
             content: res.data.msg,
-            showCancel:false
+            showCancel: false
           })
-          return;
-        }
+
         // 跳转到结算页面
         wx.navigateBack({})
       }
@@ -149,7 +163,7 @@ Page({
     var selIterm = commonCityData.cityData[event.detail.value];
     this.setData({
       selProvince:selIterm.name,
-      selProvinceIndex:event.detail.value,
+      selProvinceIndex: event.detail.value,
       selCity:'请选择',
       selCityIndex:0,
       selDistrict:'请选择',
@@ -161,7 +175,7 @@ Page({
     var selIterm = commonCityData.cityData[this.data.selProvinceIndex].cityList[event.detail.value];
     this.setData({
       selCity:selIterm.name,
-      selCityIndex:event.detail.value,
+      selCityIndex: event.detail.value,
       selDistrict: '请选择',
       selDistrictIndex: 0
     })
@@ -176,6 +190,9 @@ Page({
       })
     }
   },
+  radioChange: function (event){
+    this.data.isDefault = event.detail.value;
+  },
   onLoad: function (e) {
     var that = this;
     this.initCityData(1);
@@ -184,22 +201,30 @@ Page({
       // 初始化原数据
       wx.showLoading();
       wx.request({
-        url: 'https://api.it120.cc/' + app.globalData.subDomain + '/user/shipping-address/detail',
+        url: 'http://127.0.0.1:8090/wx/receivingAddress/selectById',
         data: {
-          token: app.globalData.token,
           id: id
         },
         success: function (res) {
-          wx.hideLoading();
-          if (res.data.code == 0) {
+          if (res.data.code == 200) {
+            wx.hideLoading();
+            that.setDBSaveAddressId(res.data.result);
+            var obj = { "detail": { "value": that.data.selProvinceIndex } }
+            that.bindPickerProvinceChange(obj);
+            that.setDBSaveAddressId(res.data.result);
+            obj.detail.value = that.data.selCityIndex;
+            that.bindPickerCityChange(obj);
+            that.setDBSaveAddressId(res.data.result);
+            obj.detail.value = that.data.selDistrictIndex;
+            that.bindPickerChange(obj);
+            res.data.result.address=res.data.result.address.replace(that.data.selProvince + that.data.selCity + that.data.selDistrict, "");
             that.setData({
               id:id,
-              addressData: res.data.data,
-              selProvince: res.data.data.provinceStr,
-              selCity: res.data.data.cityStr,
-              selDistrict: res.data.data.areaStr
+              addressData: res.data.result
+              // selProvince: this.provinces[res.data.result.provinceId],
+              // selCity: citys[res.data.result.cityId],
+              // selDistrict: districts[res.data.result.areaId]
               });
-            that.setDBSaveAddressId(res.data.data);
             return;
           } else {
             wx.showModal({
@@ -216,13 +241,19 @@ Page({
     var retSelIdx = 0;
     for (var i = 0; i < commonCityData.cityData.length; i++) {
       if (data.provinceId == commonCityData.cityData[i].id) {
-        this.data.selProvinceIndex = i;
+        this.setData({
+          selProvinceIndex : i
+        });
         for (var j = 0; j < commonCityData.cityData[i].cityList.length; j++) {
           if (data.cityId == commonCityData.cityData[i].cityList[j].id) {
-            this.data.selCityIndex = j;
+            this.setData({
+              selCityIndex: j
+            });
             for (var k = 0; k < commonCityData.cityData[i].cityList[j].districtList.length; k++) {
-              if (data.districtId == commonCityData.cityData[i].cityList[j].districtList[k].id) {
-                this.data.selDistrictIndex = k;
+              if (data.areaId == commonCityData.cityData[i].cityList[j].districtList[k].id) {
+                this.setData({
+                  selDistrictIndex: k
+                });
               }
             }
           }

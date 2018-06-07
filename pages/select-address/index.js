@@ -44,20 +44,17 @@ Page({
   initShippingAddress: function () {
     var that = this;
     wx.request({
-      url: 'https://api.it120.cc/'+ app.globalData.subDomain +'/user/shipping-address/list',
+      // url: 'https://api.it120.cc/' + app.globalData.subDomain + '/user/shipping-address/list',
+      url: 'http://127.0.0.1:8090/wx/receivingAddress/getAddressList',
       data: {
+        wechatId:"111",
         token:app.globalData.token
       },
       success: (res) =>{
-        if (res.data.code == 0) {
           that.setData({
-            addressList:res.data.data
+            addressList:res.data.result
+            
           });
-        } else if (res.data.code == 700){
-          that.setData({
-            addressList: null
-          });
-        }
       }
     })
   }
